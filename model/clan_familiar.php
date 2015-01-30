@@ -170,7 +170,7 @@ class cliente2clan extends fs_model
    
    public function __construct($c = FALSE)
    {
-      parent::__construct('cliente2clan', 'plugins/supermercado/');
+      parent::__construct('cliente2clan', 'plugins/supermercado_solidario/');
       
       if($c)
       {
