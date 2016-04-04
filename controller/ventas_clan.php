@@ -1,19 +1,19 @@
 <?php
 /*
  * This file is part of FacturaSctipts
- * Copyright (C) 2014  Carlos Garcia Gomez  neorazorx@gmail.com
+ * Copyright (C) 2014-2016  Carlos Garcia Gomez  neorazorx@gmail.com
  *
  * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as
+ * it under the terms of the GNU Lesser General Public License as
  * published by the Free Software Foundation, either version 3 of the
  * License, or (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
+ * GNU Lesser General Public License for more details.
  * 
- * You should have received a copy of the GNU Affero General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
@@ -32,9 +32,8 @@ class ventas_clan extends fs_controller
       parent::__construct(__CLASS__, 'Clan', 'ventas', FALSE, FALSE);
    }
    
-   protected function process()
+   protected function private_core()
    {
-      $this->show_fs_toolbar = FALSE;
       $this->busqueda = '';
       $this->resultado = array();
       
@@ -56,7 +55,9 @@ class ventas_clan extends fs_controller
             $this->clan->limite = floatval($_POST['limite']);
             $this->clan->restringido = isset($_POST['restringido']);
             if( $this->clan->save() )
+            {
                $this->new_message('Datos modificados correctamente.');
+            }
             else
                $this->new_error_msg('Imposible guardar los cambios.');
             
@@ -81,7 +82,9 @@ class ventas_clan extends fs_controller
             $cliente2clan->codclan = $this->clan->codclan;
             $cliente2clan->codcliente = $_GET['cliente'];
             if( $cliente2clan->save() )
+            {
                $this->new_message('Cliente añadido correctamente.');
+            }
             else
                $this->new_error_msg('Error al añadir el cliente.');
          }
@@ -96,9 +99,13 @@ class ventas_clan extends fs_controller
    public function url()
    {
       if( !isset($this->clan) )
+      {
          return parent::url();
+      }
       else if($this->clan)
+      {
          return $this->clan->url();
+      }
       else
          return parent::url();
    }

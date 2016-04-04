@@ -1,33 +1,33 @@
 <?php
 /*
  * This file is part of FacturaSctipts
- * Copyright (C) 2014  Carlos Garcia Gomez  neorazorx@gmail.com
+ * Copyright (C) 2014-2016  Carlos Garcia Gomez  neorazorx@gmail.com
  *
  * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as
+ * it under the terms of the GNU Lesser General Public License as
  * published by the Free Software Foundation, either version 3 of the
  * License, or (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
+ * GNU Lesser General Public License for more details.
  * 
- * You should have received a copy of the GNU Affero General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-require_once 'base/fs_printer.php';
 require_model('agente.php');
 require_model('albaran_cliente.php');
 require_model('articulo.php');
 require_model('caja.php');
+require_model('clan_familiar.php');
 require_model('cliente.php');
 require_model('divisa.php');
 require_model('ejercicio.php');
 require_model('pais.php');
 require_model('serie.php');
-require_model('clan_familiar.php');
+require_model('terminal_caja.php');
 
 class tpv_supermercado extends fs_controller
 {
@@ -40,20 +40,17 @@ class tpv_supermercado extends fs_controller
    public $cliente_url;
    public $numlineas;
    public $resultado;
+   public $terminal;
    
    public function __construct()
    {
       parent::__construct('tpv_supermercado', 'Supermercado', 'TPV');
    }
    
-   protected function process()
+   protected function private_core()
    {
-      header('Access-Control-Allow-Origin: *');
-      
-      $this->show_fs_toolbar = FALSE;
       $this->agente = $this->user->get_agente();
       $this->busqueda = '';
-      $this->caja = new caja();
       $this->clan = new clan_familiar();
       $this->cliente = new cliente();
       $this->numlineas = 0;
@@ -73,36 +70,74 @@ class tpv_supermercado extends fs_controller
       }
       else if($this->agente)
       {
-         /// obtenemos el bloqueo de caja, sin esto no se puede continuar
-         $this->caja = $this->caja->get_last_from_this_server();
+         $this->caja = FALSE;
+         $this->terminal = FALSE;
+         $caja = new caja();
+         $terminal0 = new terminal_caja();
+         foreach($caja->all_by_agente($this->agente->codagente) as $cj)
+         {
+            if( $cj->abierta() )
+            {
+               $this->caja = $cj;
+               $this->terminal = $terminal0->get($cj->fs_id);
+               break;
+            }
+         }
+         
+         if(!$this->caja)
+         {
+            if( isset($_POST['terminal']) )
+            {
+               $this->terminal = $terminal0->get($_POST['terminal']);
+               if(!$this->terminal)
+               {
+                  $this->new_error_msg('Terminal no encontrado.');
+               }
+               else if( $this->terminal->disponible() )
+               {
+                  $this->caja = new caja();
+                  $this->caja->fs_id = $this->terminal->id;
+                  $this->caja->codagente = $this->agente->codagente;
+                  $this->caja->dinero_inicial = floatval($_POST['d_inicial']);
+                  $this->caja->dinero_fin = floatval($_POST['d_inicial']);
+                  if( $this->caja->save() )
+                  {
+                     $this->new_message("Caja iniciada con ".$this->show_precio($this->caja->dinero_inicial) );
+                  }
+                  else
+                     $this->new_error_msg("¡Imposible guardar los datos de caja!");
+               }
+               else
+                  $this->new_error_msg('El terminal ya no está disponible.');
+            }
+            else if( isset($_GET['terminal']) )
+            {
+               $this->terminal = $terminal0->get($_GET['terminal']);
+               if($this->terminal)
+               {
+                  $this->terminal->abrir_cajon();
+                  $this->terminal->save();
+               }
+               else
+                  $this->new_error_msg('Terminal no encontrado.');
+            }
+         }
+         
          if($this->caja)
          {
             if($this->caja->codagente == $this->user->codagente OR $this->user->admin)
+            {
                $this->caja_iniciada();
+            }
             else
             {
                $this->new_error_msg("Esta caja está bloqueada por el agente ".$this->caja->agente->get_fullname().
                        ". Puedes cerrarla desde Contabilidad &gt; Caja.");
             }
          }
-         else if( isset($_POST['d_inicial']) )
-         {
-            $this->caja = new caja();
-            $this->caja->codagente = $this->user->codagente;
-            $this->caja->dinero_inicial = floatval($_POST['d_inicial']);
-            $this->caja->dinero_fin = floatval($_POST['d_inicial']);
-            if( $this->caja->save() )
-            {
-               $this->new_message( "Caja iniciada con ".$this->show_precio($this->caja->dinero_inicial) );
-               $this->caja_iniciada();
-            }
-            else
-               $this->new_error_msg("¡Imposible guardar los datos de caja!");
-         }
          else
          {
-            $fpt = new fs_printer();
-            $fpt->abrir_cajon();
+            $this->resultado = $terminal0->disponibles();
          }
       }
       else
@@ -115,9 +150,13 @@ class tpv_supermercado extends fs_controller
    public function url()
    {
       if( isset($this->cliente_url) )
+      {
          return $this->cliente_url;
+      }
       else
+      {
          return parent::url();
+      }
    }
    
    private function caja_iniciada()
@@ -236,12 +275,16 @@ class tpv_supermercado extends fs_controller
    private function buscar_articulo($full_data = FALSE)
    {
       if($full_data)
+      {
          $this->template = 'ajax_buscar_articulo2';
+      }
       else
          $this->template = 'ajax_buscar_articulo';
       
       if( isset($_POST['codbar2']) )
+      {
          $codbar = $_POST['codbar2'];
+      }
       else
          $codbar = $_POST['buscar_articulo'];
       
@@ -253,7 +296,9 @@ class tpv_supermercado extends fs_controller
       }
       
       if( isset($_POST['numlineas']) )
+      {
          $this->numlineas = $_POST['numlineas'];
+      }
       else
          $this->numlineas = 0;
    }
@@ -265,7 +310,9 @@ class tpv_supermercado extends fs_controller
       $ejercicio = new ejercicio();
       $ejercicio = $ejercicio->get_by_fecha( $this->today() );
       if( $ejercicio )
+      {
          $this->save_codejercicio( $ejercicio->codejercicio );
+      }
       else
       {
          $this->new_error_msg('Ejercicio no encontrado.');
@@ -331,7 +378,9 @@ class tpv_supermercado extends fs_controller
          }
          
          if( is_null($albaran->codcliente) )
+         {
             $this->new_error_msg("No hay ninguna dirección asociada al cliente.");
+         }
          else if( $albaran->save() )
          {
             $articulo = new articulo();
@@ -395,13 +444,17 @@ class tpv_supermercado extends fs_controller
                   $this->caja->tickets += 1;
                   $this->caja->ip = $_SERVER['REMOTE_ADDR'];
                   if( !$this->caja->save() )
+                  {
                      $this->new_error_msg("¡Imposible actualizar la caja!");
+                  }
                }
                else
                   $this->new_error_msg("¡Imposible actualizar el ".FS_ALBARAN."!");
             }
             else if( $albaran->delete() )
+            {
                $this->new_message(FS_ALBARAN." eliminado correctamente.");
+            }
             else
                $this->new_error_msg("¡Imposible eliminar el ".FS_ALBARAN."!");
          }
@@ -449,7 +502,9 @@ class tpv_supermercado extends fs_controller
       /// imprimimos los impuestos desglosados
       $impuestos_txt = 'IVA ';
       foreach($impuestos as $imp)
-         $impuestos_txt .= $imp.'%: '.  $this->show_precio($totales[$imp], $albaran->coddivisa, FALSE).'  ';
+      {
+         $impuestos_txt .= $imp.'%: '.$this->show_precio($totales[$imp], $albaran->coddivisa, FALSE).'  ';
+      }
       $fpt->add( $fpt->center_text($impuestos_txt, 42)."\n" );
       
       $fpt->add( $fpt->center_text("Total: ".$this->show_precio($albaran->total, $albaran->coddivisa, FALSE), 42)."\n" );
@@ -511,7 +566,9 @@ class tpv_supermercado extends fs_controller
                $this->caja->dinero_fin -= $alb->total;
                $this->caja->tickets -= 1;
                if( !$this->caja->save() )
+               {
                   $this->new_error_msg("¡Imposible actualizar la caja!");
+               }
             }
             else
                $this->new_error_msg("¡Imposible borrar el ticket ".$_GET['delete']."!");

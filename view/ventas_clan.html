@@ -30,7 +30,9 @@
       $("#b_eliminar").click(function(event) {
          event.preventDefault();
          if( confirm("¿Realmente desea eliminar este clan?") )
+         {
             window.location.href = 'index.php?page=ventas_clan&delete={$fsc->clan->codclan}';
+         }
       });
       $("#b_buscar_cliente").click(function(event) {
          event.preventDefault();
@@ -50,40 +52,54 @@
 <form action="{$fsc->url()}" method="post" class="form">
    <div class="container-fluid">
       <div class="row">
-         <div class="col-md-6">
+         <div class="col-xs-4">
+            <a href="index.php?page=ventas_clanes" class="btn btn-sm btn-default">
+               <span class="glyphicon glyphicon-arrow-left" aria-hidden="true"></span>
+               <span class="hidden-xs">&nbsp; Todos</span>
+            </a>
+            <a href="{$fsc->url()}" class="btn btn-sm btn-default">
+               <span class="glyphicon glyphicon-refresh" aria-hidden="true"></span>
+            </a>
+         </div>
+         <div class="col-xs-8 text-right">
+            <div class="btn-group">
+               <a href="#" class="btn btn-sm btn-danger" id="b_eliminar">
+                  <span class="glyphicon glyphicon-trash" aria-hidden="true"></span>
+                  <span class="hidden-xs">&nbsp; Eliminar</span>
+               </a>
+               <button type="submit" class="btn btn-sm btn-primary" onclick="this.disabled=true;this.form.submit();">
+                  <span class="glyphicon glyphicon-floppy-disk" aria-hidden="true"></span>
+                  <span class="hidden-xs">&nbsp; Guardar</span>
+               </button>
+            </div>
+         </div>
+      </div>
+      <div class="row" style="margin-top: 10px;">
+         <div class="col-sm-5">
             <div class="form-group">
                Nombre del clan:
                <input class="form-control" type="text" name="nombre" value="{$fsc->clan->nombre}" autocomplete="off"/>
             </div>
          </div>
-         <div class="col-md-6 text-right">
-            <a href="{$fsc->url()}" class="btn btn-sm btn-default">
-               <span class="glyphicon glyphicon-refresh" aria-hidden="true"></span>
-            </a>
-            <div class="btn-group">
-               <a href="#" class="btn btn-sm btn-danger" id="b_eliminar">
-                  <span class="glyphicon glyphicon-trash" aria-hidden="true"></span> &nbsp; Eliminar
-               </a>
-               <button type="submit" class="btn btn-sm btn-primary" onclick="this.disabled=true;this.form.submit();">
-                  <span class="glyphicon glyphicon-floppy-disk" aria-hidden="true"></span> &nbsp; Guardar
-               </button>
-            </div>
-         </div>
-      </div>
-      <div class="row">
-         <div class="col-md-4">
+         <div class="col-sm-4">
             <div class="form-group">
-               Límite de gasto ({$fsc->simbolo_divisa()}):
-               <input class="form-control" type="text" name="limite" value="{$fsc->clan->limite}" autocomplete="off" onclick="this.select()"/>
+               Límite de gasto:
+               <div class="input-group">
+                  <input class="form-control" type="text" name="limite" value="{$fsc->clan->limite}" autocomplete="off" onclick="this.select()"/>
+                  <span class="input-group-addon">{$fsc->simbolo_divisa()}</span>
+               </div>
             </div>
          </div>
-         <div class="col-md-4">
+         <div class="col-sm-3">
             <div class="form-group">
                Gastados:
-               <div class="form-control">{$fsc->show_precio($fsc->clan->gastado())}</div>
+               <div class="input-group">
+                  <div class="form-control">{$fsc->show_numero($fsc->clan->gastado())}</div>
+                  <span class="input-group-addon">{$fsc->simbolo_divisa()}</span>
+               </div>
             </div>
          </div>
-         <div class="col-md-4">
+         <div class="col-sm-4">
             <div class="checkbox">
                <label>
                   <input type="checkbox" name="restringido" value="TRUE"{if condition="$fsc->clan->restringido"} checked="checked"{/if}/>

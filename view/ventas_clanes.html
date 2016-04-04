@@ -10,30 +10,33 @@
    });
 </script>
 
-<ul class="nav nav-tabs">
-   <li>
-      <a href="{$fsc->url()}">
-         <span class="glyphicon glyphicon-refresh" aria-hidden="true"></span>
-      </a>
-   </li>
-   <li class="active">
-      <a href="#home">Clanes</a>
-   </li>
-   <li>
-      <a href="#nuevo" id="b_nuevo_clan">
-         <span class="glyphicon glyphicon-plus" aria-hidden="true"></span> &nbsp; Nuevo
-      </a>
-   </li>
-</ul>
-
-<div class="container-fluid" style="margin-top: 10px;">
+<div class="container">
+   <div class="row">
+      <div class="col-sm-12">
+         <div class="page-header">
+            <h1>
+               <i class="fa fa-users"></i>&nbsp;
+               Clanes familiares
+               <a href="{$fsc->url()}" class="btn btn-xs btn-default">
+                  <span class="glyphicon glyphicon-refresh" aria-hidden="true"></span>
+               </a>
+               <a href="#nuevo" id="b_nuevo_clan" class="btn btn-xs btn-success">
+                  <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
+                  <span class="hidden-xs">&nbsp; Nuevo</span>
+               </a>
+            </h1>
+         </div>
+      </div>
+   </div>
    <div class="row">
       {loop="$fsc->clan->all()"}
-      <div class="col-md-4">
-         <a href="{$value->url()}">{$value->nombre}</a>
+      <div class="col-sm-4">
+         <a href="{$value->url()}" class="btn btn-sm btn-default">
+            <i class="fa fa-users"></i>&nbsp; {$value->nombre}
+         </a>
       </div>
       {else}
-      <div class="col-md-12">
+      <div class="col-sm-12">
          <div class="alert alert-warning">Sin resultados.</div>
       </div>
       {/loop}
@@ -41,24 +44,24 @@
 </div>
 
 <div class="modal" id="modal_nuevo_clan">
-   <div class="modal-dialog">
+   <div class="modal-dialog modal-sm">
       <div class="modal-content">
          <div class="modal-header">
             <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
             <h4 class="modal-title">Nuevo clan familiar</h4>
          </div>
-         <div class="modal-body">
-            <form id="f_nuevo_clan" name="f_nuevo_clan" action="{$fsc->url()}" method="post" class="form">
-               <div class="input-group">
+         <form id="f_nuevo_clan" name="f_nuevo_clan" action="{$fsc->url()}" method="post" class="form">
+            <div class="modal-body">
+               <div class="form-group">
                   <input class="form-control" type="text" name="nombre" placeholder="Nombre" autocomplete="off"/>
-                  <span class="input-group-btn">
-                     <button class="btn btn-primary" type="submit">
-                        <span class="glyphicon glyphicon-floppy-disk"></span>
-                     </button>
-                  </span>
                </div>
-            </form>
-         </div>
+            </div>
+            <div class="modal-footer">
+               <button class="btn btn-sm btn-primary" type="submit">
+                  <span class="glyphicon glyphicon-floppy-disk"></span>&nbsp; Guardar
+               </button>
+            </div>
+         </form>
       </div>
    </div>
 </div>
