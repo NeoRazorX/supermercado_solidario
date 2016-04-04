@@ -166,8 +166,11 @@ class tpv_supermercado extends fs_controller
       if( isset($_GET['cerrando']) )
       {
          $this->template = 'tpv_supermercado_cierre';
-         $fpt = new fs_printer();
-         $fpt->abrir_cajon();
+         if($this->terminal)
+         {
+            $this->terminal->abrir_cajon();
+            $this->terminal->save();
+         }
       }
       else if( isset($_POST['cerrar_caja']) )
       {
@@ -209,24 +212,27 @@ class tpv_supermercado extends fs_controller
       $this->caja->fecha_fin = Date('d-m-Y H:i:s');
       if( $this->caja->save() )
       {
-         /// imprimimos dos veces
-         for($i = 0; $i < 2; $i++)
+         if($this->terminal)
          {
-            $fpt = new fs_printer();
-            $fpt->add( chr(27).chr(64)."\n\n" );
-            $fpt->add( $fpt->center_text("CIERRE DE CAJA:", 42) );
-            $fpt->add("\n\nAgente: ".$this->agente->nombre."\n");
-            $fpt->add("Caja: ".$this->caja->fs_id."\n");
-            $fpt->add("Fecha inicial: ".$this->caja->fecha_inicial."\n");
-            $fpt->add("Cambio inicial: ".$this->show_precio($this->caja->dinero_inicial, FALSE, FALSE)."\n");
-            $fpt->add("Fecha fin: ".$this->caja->show_fecha_fin()."\n");
-            $fpt->add("Ingresos estimados: ".$this->show_precio($this->caja->diferencia(), FALSE, FALSE)."\n");
-            $fpt->add("Ingresos contado: ".$this->show_precio($dinero_contado, FALSE, FALSE)."\n");
-            $fpt->add("Diferencia: ".$this->show_precio($dinero_contado-$this->caja->diferencia(), FALSE, FALSE)."\n");
-            $fpt->add("Tickets: ".$this->caja->tickets."\n\n");
-            $fpt->add("Observaciones:\n\n\n\n");
-            $fpt->add("Firma:\n\n\n\n\n\n\n\n\n\n\n".chr(29).chr(86).chr(66).chr(0));
-            $fpt->imprimir();
+            /// imprimimos dos veces
+            for($i = 0; $i < 2; $i++)
+            {
+               $this->terminal->cortar_papel();
+               $this->terminal->add_linea_big("CIERRE DE CAJA:");
+               $this->terminal->add_linea("\n\nAgente: ".$this->agente->nombre."\n");
+               $this->terminal->add_linea("Caja: ".$this->caja->fs_id."\n");
+               $this->terminal->add_linea("Fecha inicial: ".$this->caja->fecha_inicial."\n");
+               $this->terminal->add_linea("Cambio inicial: ".$this->show_precio($this->caja->dinero_inicial, FALSE, FALSE)."\n");
+               $this->terminal->add_linea("Fecha fin: ".$this->caja->show_fecha_fin()."\n");
+               $this->terminal->add_linea("Ingresos estimados: ".$this->show_precio($this->caja->diferencia(), FALSE, FALSE)."\n");
+               $this->terminal->add_linea("Ingresos contado: ".$this->show_precio($dinero_contado, FALSE, FALSE)."\n");
+               $this->terminal->add_linea("Diferencia: ".$this->show_precio($dinero_contado-$this->caja->diferencia(), FALSE, FALSE)."\n");
+               $this->terminal->add_linea("Tickets: ".$this->caja->tickets."\n\n");
+               $this->terminal->add_linea("Observaciones:\n\n\n\n");
+               $this->terminal->add_linea("Firma:\n\n\n\n\n\n\n\n\n\n\n");
+               $this->terminal->cortar_papel();
+               $this->terminal->save();
+            }
          }
          
          /// recargamos la página
@@ -309,11 +315,7 @@ class tpv_supermercado extends fs_controller
       
       $ejercicio = new ejercicio();
       $ejercicio = $ejercicio->get_by_fecha( $this->today() );
-      if( $ejercicio )
-      {
-         $this->save_codejercicio( $ejercicio->codejercicio );
-      }
-      else
+      if(!$ejercicio)
       {
          $this->new_error_msg('Ejercicio no encontrado.');
          $continuar = FALSE;
@@ -365,7 +367,7 @@ class tpv_supermercado extends fs_controller
             {
                $albaran->codcliente = $this->cliente->codcliente;
                $albaran->cifnif = $this->cliente->cifnif;
-               $albaran->nombrecliente = $this->cliente->nombrecomercial;
+               $albaran->nombrecliente = $this->cliente->razonsocial;
                $albaran->apartado = $d->apartado;
                $albaran->ciudad = $d->ciudad;
                $albaran->coddir = $d->id;
@@ -463,69 +465,74 @@ class tpv_supermercado extends fs_controller
       }
    }
    
-   private function imprimir_ticket($albaran)
+   private function imprimir_ticket($factura, $cajon = TRUE)
    {
-      $fpt = new fs_printer();
-      $fpt->abrir_cajon();
-      
-      $fpt->add( chr(27).chr(64) );
-      $fpt->add( $fpt->center_text($this->empresa->nombre, 42)."\n" );
-      $fpt->add( $fpt->center_text($this->empresa->direccion.' - CP: '.$this->empresa->codpostal.' - '.$this->empresa->ciudad, 42)."\n" );
-      $fpt->add( $fpt->center_text('CIF: '.$this->empresa->cifnif, 42)."\n\n" );
-      $fpt->add( 'Ticket: '.$albaran->codigo.' '.$albaran->fecha.' '.$albaran->show_hora(FALSE)."\n" );
-      $fpt->add( 'Cliente: '.$albaran->nombrecliente."\n" );
-      
-      $agente = new agente();
-      $age0 = $agente->get($albaran->codagente);
-      $fpt->add("Empleado: ".$age0->nombre."\n\n");
-      
-      $fpt->add(sprintf("%3s", "Ud.")." ".sprintf("%-25s", "Articulo")." ".sprintf("%10s", "TOTAL")."\n");
-      $fpt->add(sprintf("%3s", "---")." ".sprintf("%-25s", "-------------------------")." ".sprintf("%10s", "----------")."\n");
-      $impuestos = array();
-      $totales = array();
-      foreach($albaran->get_lineas() as $col)
+      if($this->terminal)
       {
-         /// desglosamos el iva
-         if( !in_array($col->iva, $impuestos) )
+         if($cajon)
          {
-            $impuestos[] = $col->iva;
-            $totales[$col->iva] = $col->pvptotal*$col->iva/100;
+            $this->terminal->abrir_cajon();
+         }
+         
+         $medio = $this->terminal->anchopapel / 2.5;
+         $this->terminal->add_linea_big( $this->terminal->center_text($this->empresa->nombre, $medio)."\n");
+         
+         if($this->empresa->lema != '')
+         {
+            $this->terminal->add_linea( $this->terminal->center_text($this->empresa->lema) . "\n\n");
          }
          else
-            $totales[$col->iva] += $col->pvptotal*$col->iva/100;
+            $this->terminal->add_linea("\n");
          
-         $fpt->add(sprintf("%3s", $col->cantidad)." ".sprintf("%-25s", substr($col->descripcion,0,24))." ".sprintf("%10s", $this->show_numero($col->total_iva()))."\n");
-      }
-      
-      $fpt->add("----------------------------------------\n");
-      
-      /// imprimimos los impuestos desglosados
-      $impuestos_txt = 'IVA ';
-      foreach($impuestos as $imp)
-      {
-         $impuestos_txt .= $imp.'%: '.$this->show_precio($totales[$imp], $albaran->coddivisa, FALSE).'  ';
-      }
-      $fpt->add( $fpt->center_text($impuestos_txt, 42)."\n" );
-      
-      $fpt->add( $fpt->center_text("Total: ".$this->show_precio($albaran->total, $albaran->coddivisa, FALSE), 42)."\n" );
-      
-      if( isset($_POST['efectivo']) AND isset($_POST['cambio']) )
-      {
-         $fpt->add(
-            $fpt->center_text(
-               "Entregado: ".$this->show_precio($_POST['efectivo'], $albaran->coddivisa, FALSE).
-               "  Cambio: ".$this->show_precio($_POST['cambio'], $albaran->coddivisa, FALSE),
-               42
-            )."\n"
+         $this->terminal->add_linea( $this->terminal->center_text($this->empresa->direccion . " - " . $this->empresa->ciudad) . "\n");
+         $this->terminal->add_linea( $this->terminal->center_text("CIF: " . $this->empresa->cifnif));
+         $this->terminal->add_linea("\n\n");
+         
+         if($this->empresa->horario != '')
+         {
+            $this->terminal->add_linea( $this->terminal->center_text($this->empresa->horario) . "\n\n");
+         }
+         
+         $linea = "\n".ucfirst(FS_FACTURA_SIMPLIFICADA).": " . $factura->codigo . "\n";
+         $linea .= $factura->fecha. " " . Date('H:i', strtotime($factura->hora)) . "\n";
+         $this->terminal->add_linea($linea);
+         $this->terminal->add_linea("Cliente: " . $factura->nombrecliente . "\n");
+         $this->terminal->add_linea("Empleado: " . $factura->codagente . "\n\n");
+         
+         $width = $this->terminal->anchopapel - 15;
+         $this->terminal->add_linea(
+                 sprintf("%3s", "Ud.")." ".
+                 sprintf("%-".$width."s", "Articulo")." ".
+                 sprintf("%10s", "TOTAL")."\n"
          );
+         $this->terminal->add_linea(
+                 sprintf("%3s", "---")." ".
+                 sprintf("%-".$width."s", substr("--------------------------------------------------------", 0, $width-1))." ".
+                 sprintf("%10s", "----------")."\n"
+         );
+         foreach($factura->get_lineas() as $col)
+         {
+            $linea = sprintf("%3s", $col->cantidad)." ".sprintf("%-".$width."s", substr($col->descripcion, 0, $width-1))." "
+                    .sprintf("%10s", $this->show_numero($col->total_iva()))."\n";
+            
+            $this->terminal->add_linea($linea);
+         }
+         
+         $linea = '';
+         for($i = 0; $i < $this->terminal->anchopapel; $i++)
+         {
+            $linea .= '-';
+         }
+         
+         $linea .= "\n".$this->terminal->center_text(
+                 FS_IVA.": ".$this->show_precio($factura->totaliva, $factura->coddivisa, FALSE).'   '.
+                 "Total: ".$this->show_precio($factura->total, $factura->coddivisa, FALSE)
+         )."\n\n\n\n\n\n\n\n";
+         $this->terminal->add_linea($linea);
+         $this->terminal->cortar_papel();
+         
+         $this->terminal->save();
       }
-      
-      $fpt->add(
-         $fpt->center_text('Pendiente: '.$this->show_precio($this->clan->pendiente(), $albaran->coddivisa, FALSE), 42).
-         "\n\n\n\n\n\n\n".chr(29).chr(86).chr(66).chr(0)."\n\n"
-      );
-      
-      $fpt->imprimir();
    }
    
    private function borrar_ticket()
@@ -537,41 +544,43 @@ class tpv_supermercado extends fs_controller
          if($alb->ptefactura)
          {
             /// imprimimos
-            $fpt = new fs_printer();
-            $fpt->add( chr(27).chr(64) );
-            $fpt->add("----------------------------------------\n");
-            $fpt->add( $fpt->center_text('*** TICKET BORRADO ***', 42)."\n" );
-            $fpt->add("----------------------------------------\n");
-            $fpt->imprimir();
-            unset($fpt);
-            $this->imprimir_ticket($alb);
-            
-            /// actualizamos el stock
-            $articulo = new articulo();
-            foreach($alb->get_lineas() as $linea)
+            if($this->terminal)
             {
-               $art0 = $articulo->get($linea->referencia);
-               if($art0)
-               {
-                  $art0->sum_stock($alb->codalmacen, $linea->cantidad);
-                  $art0->save();
-               }
-            }
-            
-            if( $alb->delete() )
-            {
-               $this->new_message("Ticket ".$_GET['delete']." borrado correctamente.");
+               $this->terminal->cortar_papel();
+               $this->terminal->add_linea("----------------------------------------\n");
+               $this->terminal->add_linea( $fpt->center_text('*** TICKET BORRADO ***', 42)."\n" );
+               $this->terminal->add_linea("----------------------------------------\n");
+               $this->terminal->save();
                
-               /// actualizamos la caja
-               $this->caja->dinero_fin -= $alb->total;
-               $this->caja->tickets -= 1;
-               if( !$this->caja->save() )
+               $this->imprimir_ticket($alb);
+               
+               /// actualizamos el stock
+               $articulo = new articulo();
+               foreach($alb->get_lineas() as $linea)
                {
-                  $this->new_error_msg("¡Imposible actualizar la caja!");
+                  $art0 = $articulo->get($linea->referencia);
+                  if($art0)
+                  {
+                     $art0->sum_stock($alb->codalmacen, $linea->cantidad);
+                     $art0->save();
+                  }
                }
+               
+               if( $alb->delete() )
+               {
+                  $this->new_message("Ticket ".$_GET['delete']." borrado correctamente.");
+                  
+                  /// actualizamos la caja
+                  $this->caja->dinero_fin -= $alb->total;
+                  $this->caja->tickets -= 1;
+                  if( !$this->caja->save() )
+                  {
+                     $this->new_error_msg("¡Imposible actualizar la caja!");
+                  }
+               }
+               else
+                  $this->new_error_msg("¡Imposible borrar el ticket ".$_GET['delete']."!");
             }
-            else
-               $this->new_error_msg("¡Imposible borrar el ticket ".$_GET['delete']."!");
          }
          else
             $this->new_error_msg('No se ha podido borrar este '.FS_ALBARAN.' porque ya está facturado.');
