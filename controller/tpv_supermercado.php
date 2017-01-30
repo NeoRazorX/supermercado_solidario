@@ -76,7 +76,17 @@ class tpv_supermercado extends fs_controller
          $this->terminal = FALSE;
          $caja = new caja();
          $terminal0 = new terminal_caja();
-         foreach($caja->all_by_agente($this->agente->codagente) as $cj)
+         
+         if($this->user->admin)
+         {
+            $cajas = $caja->all();
+         }
+         else
+         {
+            $cajas = $caja->all_by_agente($this->agente->codagente);
+         }
+         
+         foreach($cajas as $cj)
          {
             if( $cj->abierta() )
             {
