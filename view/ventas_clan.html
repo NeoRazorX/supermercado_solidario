@@ -65,11 +65,11 @@
             <div class="btn-group">
                <a href="#" class="btn btn-sm btn-danger" id="b_eliminar">
                   <span class="glyphicon glyphicon-trash" aria-hidden="true"></span>
-                  <span class="hidden-xs">&nbsp; Eliminar</span>
+                  <span class="hidden-xs">&nbsp;Eliminar</span>
                </a>
                <button type="submit" class="btn btn-sm btn-primary" onclick="this.disabled=true;this.form.submit();">
                   <span class="glyphicon glyphicon-floppy-disk" aria-hidden="true"></span>
-                  <span class="hidden-xs">&nbsp; Guardar</span>
+                  <span class="hidden-xs">&nbsp;Guardar</span>
                </button>
             </div>
          </div>
@@ -113,11 +113,13 @@
    <div role="tabpanel">
       <ul class="nav nav-tabs" role="tablist">
          <li role="presentation" class="active">
-            <a href="#home" aria-controls="home" role="tab" data-toggle="tab">Clientes</a>
+            <a href="#home" aria-controls="home" role="tab" data-toggle="tab">
+               <i class="fa fa-users" aria-hidden="true"></i>&nbsp; Clientes
+            </a>
          </li>
          <li>
             <a href="#nuevo" title="añadir un nuevo cliente al clan" id="b_buscar_cliente">
-               <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
+               <i class="fa fa-user-plus" aria-hidden="true"></i>
             </a>
          </li>
          <li role="presentation">
@@ -152,6 +154,10 @@
                   </tr>
                   {/loop}
                </table>
+            </div>
+            <div class="alert alert-info">
+               <i class="fa fa-square-o" aria-hidden="true"></i>&nbsp;
+               Desmarcar cliente para eliminar de este clan.
             </div>
          </div>
          <div role="tabpanel" class="tab-pane" id="albaranes">
@@ -218,7 +224,7 @@
 </form>
 {else}
 <div class="text-center">
-   <img src="view/img/fuuu_face.png" alt="fuuuuu"/>
+   <img src="{#FS_PATH#}view/img/fuuu_face.png" alt="fuuuuu"/>
 </div>
 {/if}
 
