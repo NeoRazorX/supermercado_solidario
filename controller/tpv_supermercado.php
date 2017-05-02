@@ -547,12 +547,9 @@ class tpv_supermercado extends fs_controller
             
             if( isset($_POST['efectivo']) AND isset($_POST['cambio']) )
             {
-               $this->terminal->add_linea(
-                       $this->terminal->center_text(
-                               "Entregado: ".$this->show_precio($_POST['efectivo'], $factura->coddivisa, FALSE).
-                               "  Cambio: ".$this->show_precio($_POST['cambio'], $factura->coddivisa, FALSE),
-                               42
-                        )."\n"
+               $linea .= "\n\n".$this->terminal->center_text(
+                       "Entregado: ".$this->show_precio($_POST['efectivo'], $factura->coddivisa, FALSE).
+                       "  Cambio: ".$this->show_precio($_POST['cambio'], $factura->coddivisa, FALSE)
                );
             }
             
