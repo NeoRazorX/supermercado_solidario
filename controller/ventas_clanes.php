@@ -1,5 +1,4 @@
 <?php
-
 /*
  * This file is part of supermercado_solidario
  * Copyright (C) 2014-2017  Carlos Garcia Gomez  neorazorx@gmail.com
@@ -18,45 +17,36 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-require_model('clan_familiar.php');
-
 class ventas_clanes extends fs_controller
 {
-   public $clan;
-   
-   public function __construct()
-   {
-      parent::__construct(__CLASS__, 'Clanes familiares', 'ventas');
-   }
-   
-   protected function private_core()
-   {
-      $this->clan = new clan_familiar();
-      
-      if( isset($_GET['delete']) )
-      {
-         $clan = $this->clan->get($_GET['delete']);
-         if($clan)
-         {
-            if( $clan->delete() )
-            {
-               $this->new_message('Clan eliminado correctamente.');
-            }
-            else
-               $this->new_message('Ha sido imposible eliminar el clan.');
-         }
-         else
-            $this->new_message('Clan no encontrado.');
-      }
-      else if( isset($_POST['nombre']) )
-      {
-         $this->clan->nombre = $_POST['nombre'];
-         if( $this->clan->save() )
-         {
-            header('Location: '.$this->clan->url());
-         }
-         else
-            $this->new_error_msg('Imposible guardar el clan familiar.');
-      }
-   }
+
+    public $clan;
+
+    public function __construct()
+    {
+        parent::__construct(__CLASS__, 'Clanes familiares', 'ventas');
+    }
+
+    protected function private_core()
+    {
+        $this->clan = new clan_familiar();
+
+        if (isset($_GET['delete'])) {
+            $clan = $this->clan->get($_GET['delete']);
+            if ($clan) {
+                if ($clan->delete()) {
+                    $this->new_message('Clan eliminado correctamente.');
+                } else
+                    $this->new_message('Ha sido imposible eliminar el clan.');
+            } else
+                $this->new_message('Clan no encontrado.');
+        }
+        else if (isset($_POST['nombre'])) {
+            $this->clan->nombre = $_POST['nombre'];
+            if ($this->clan->save()) {
+                header('Location: ' . $this->clan->url());
+            } else
+                $this->new_error_msg('Imposible guardar el clan familiar.');
+        }
+    }
 }
